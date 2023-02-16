@@ -276,9 +276,9 @@ class App extends React.Component {
   return loaderMeta
 }
 ```
-### `miniPlugin` 
+### `@tarojs/react` 
 
-
+`@tarojs/react` 在打包过程中用来**替代** `react-dom`，该包的主要作用是通过自定义的`HostConfig` 结合`@tarojs/runtime` 来将**运行时**的`react` dom、bom 操作打通到小程序的`"dom bom"`操作。
 
 ## 关键流程图
 <img src="./taro-drawio.svg"/>
