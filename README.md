@@ -204,4 +204,5 @@ public async start () {
 
 这个包的作用就是封装 `webpack5`实现最终的代码转换&打包
 
+## 关键流程图
 <img src="./taro-drawio.svg"/>
