@@ -200,9 +200,85 @@ public async start () {
   }
 ```
 
-## `@tarojs/webpack5-runner`
+### `@tarojs/webpack5-runner`
 
 这个包的作用就是封装 `webpack5`实现最终的代码转换&打包
+
+### 关键的 `@tarojs/plugin-framework-react`
+
+这个包的作用是通过注册`modifyWebpackChain`与`modifyRunnerOpts`两个hook 来修改打包工具的配置。
+
+1. `modifyWebpackChain`
+
+```javascript
+({ chain }) => {
+  // 通过设置别名来劫持 特定的包
+  // 这里处理通用的 包劫持逻辑 preact 框架下将 react 的相关包重定向到 preact (alias.set('react', 'preact/compat')); 
+  // nerv 框架下 将 react 相关包重定向的 nerv (alias.set('react$', 'nervjs'))
+  setAlias(framework, chain)
+  chain
+    .plugin('definePlugin')
+    .tap(args => {
+      const config = args[0]
+      config.__TARO_FRAMEWORK__ = `"${framework}"`
+      return args
+    })
+  // 区分 H5 打包与 小程序打包
+  if (process.env.TARO_ENV === 'h5') {
+    // H5
+    modifyH5WebpackChain(ctx, framework, chain)
+  } else {
+    // 小程序
+    modifyMiniWebpackChain(ctx, framework, chain)
+  }
+}
+```
+
+2. `modifyMiniWebpackChain` 用于修改小程序打包过程中的配置信息， 通过设置别名来劫持打包过程中的包，通过`webpack-chain` 来设置 **miniPlugin** 插件的参数
+```javascript
+export function modifyMiniWebpackChain (ctx: IPluginContext, framework: Frameworks, chain) {
+  // 同样的 通过设置别名信息来 劫持 某些特定的包
+  // 这里主要是将 react-dom 劫持到 @tarojs/react
+  // alias.set('react-dom$', '@tarojs/react')
+  setAlias(ctx, framework, chain)
+  // 为 miniPlugin 设置参数
+  setLoader(framework, chain)
+}
+```
+
+3. `getLoaderMeta` 用于获取代码拼接过程中的关键参数, 这些参数将通过 `miniPlugin` 传递给 `@tarojs/taro-loader`，这个 loader 用于实现运行时代码的注入。
+```javascript
+export function getLoaderMeta (framework: Frameworks): ILoaderMeta {
+  const loaderMeta = {
+    importFrameworkStatement: `
+import * as React from 'react'
+import ReactDOM from 'react-dom'
+`,
+    mockAppStatement: `
+class App extends React.Component {
+  render () {
+    return this.props.children
+  }
+}
+`,
+    frameworkArgs: 'React, ReactDOM, config',
+    creator: 'createReactApp',
+    creatorLocation: '@tarojs/plugin-framework-react/dist/runtime',
+    importFrameworkName: 'React',
+    extraImportForWeb: '',
+    execBeforeCreateWebApp: '',
+    modifyConfig (config, source) {
+      Object.assign(config, addConfig(source))
+    }
+  }
+  //  这里省略了与小程序 无关的 代码
+  // ...
+  return loaderMeta
+}
+```
+### `miniPlugin` 
+
+
 
 ## 关键流程图
 <img src="./taro-drawio.svg"/>
